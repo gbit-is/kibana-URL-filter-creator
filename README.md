@@ -76,6 +76,16 @@ $ sudo systemctl daemon-reload
 $ systemctl start urlmaker.service
 
 
+# Configuration
+There are 3 parameters that have to be set on lines 23-25    
+
+* base: The base URL your kibana instance (for example: "https://your_kibana_url/app/kibana#/dashboard/") 
+
+* defaultBoardId: if no board id is provided, this is what it will default to (for example: "8f64416c-3f95-46b9-bf86-ae99dc03eabc" )  
+
+* defaultIndexId: If no index id is provived, this is that it will default to (for example: "8f64416c-3f95-46b9-bf86-ae99dc03eabc" )    
+
+
 
 # Kibana versions this works on:
 I do not know if this works on older Kibana versions, but I am guessing it works with at least all 6 and 7 releases. I wrote this for my usage on 7.4
