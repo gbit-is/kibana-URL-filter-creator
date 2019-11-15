@@ -1,0 +1,12 @@
+[Unit]
+Description="Creates links to kibana"
+After=network.target
+
+[Service]
+User=bob
+WorkingDirectory=/opt/urlMaker
+ExecStart=/opt/urlMaker/urlMaker.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
