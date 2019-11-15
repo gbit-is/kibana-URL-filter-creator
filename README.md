@@ -76,3 +76,7 @@ $ sudo systemctl daemon-reload
 $ systemctl start urlmaker.service
 
 
+
+# Kibana versions this works on:
+I do not know if this works on older Kibana versions, but I am guessing it works with at least all 6 and 7 releases. I wrote this for my usage on 7.4
+If you end up trying this on a diffirent version, please leave me a comment so I can note down here which version work and which versions don't 
