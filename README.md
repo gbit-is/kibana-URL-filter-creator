@@ -88,5 +88,6 @@ There are 3 parameters that have to be set on lines 23-25
 
 
 # Kibana versions this works on:
-I do not know if this works on older Kibana versions, but I am guessing it works with at least all 6 and 7 releases. I wrote this for my usage on 7.4. Also confirmed on 7.5, 7.6, 7.6.2
+I do not know if this works on older Kibana versions, but I am guessing it works with at least all 6 and 7 releases. I wrote this for my usage on 7.4. Also confirmed on 7.5, 7.6, 7.6.2 aaaand I have been using this through constant updates until at least 7.9, I just don't update this readme.md often
+
 If you end up trying this on a diffirent version, please leave me a comment so I can note down here which version work and which versions don't 
