@@ -78,17 +78,20 @@ If the dashboard you want to link to does not belong to the default space, a spa
 if no \_time value is provided it will default to the predefined one (last hour by default). However if you want to be able to link to a specific time you can do so by providing a timestamp and 1 or 2 time values (in minutes), if one is provided it is the time before and after the timestamp, if 2 are provided the first one sets the "from" time value and the second one the "to" time value.
 
 The syntax works as following:
-
+```
 &\_time=timestamp(ISO8601)|preTime|<postTime>
-  
+```
 Examples:
 
+```
 &\_time=2020-11-05T14:39:11.406Z|30
+```
 
 This will give you an hour long report with 30 minutes before and after the timestamp
 
-
+```
 &\_time=2020-11-05T14:39:11.406Z|80|10
+```
 
 This will give you a 90 minute report with 80 minutes before the timestamp and 10 minutes after it 
 
@@ -96,8 +99,9 @@ This will give you a 90 minute report with 80 minutes before the timestamp and 1
 
 Here is the link to our hamster board (because why give a non-silly example ?), it uses aliases for the uuid's of both the hamster-price board and the pet-data index, specifies it should route to the rodent team, give us a specific time frame and only show us data about cute hamsters and defines the nested field of body.limbs.legs ( [body][limbs][legs]) should be 4 
 
+```
 your_flask_service?id=hamsterPrices&_index=petDatax&space=rodents&\_time=2020-11-05T14:39:11.406Z|80|10&cute=yes&body.limbs.legs=4
-
+```
 
 
 # Installing 
