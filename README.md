@@ -104,6 +104,25 @@ your_flask_service?id=hamsterPrices&_index=petDatax&space=rodents&\_time=2020-11
 ```
 
 
+# creating links with logstash
+
+My use case was if condition were met, use logstash to create a field, containing a URL to a report 
+
+This is achieved with for example:
+
+```
+filter {
+
+  if ( [animal][species] == "hamster" ) {
+    mutate {
+      add_field => { "[dashboard][link]" => "your_flask_service?id=hamsterPrices&_time=%{[@timestamp]}|45&body.limbs.legs=%{[body][limbs][legs]}
+    }
+  }
+}
+```
+
+if the message is about hamsters, we create a field and populate with a link to the hamster report, 90 minutes around it, with the same amount of legs as the hamster in the message 
+
 # Installing 
 ## Linux:
 apt-get install python3-flask    
