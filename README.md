@@ -1,7 +1,12 @@
-# kibana-URL-filter-creator
+# kibana-URL-filter-creator (version 2.0)
 A small flask service that generates Kibana dashboard URL's with filters preset      
 The code is heavily commented and is quite short, I won't be going too much into the code here, more the purpose and usage of this project.
 
+# New in version 2.0
+- route to specific spaces 
+- defined time parameters 
+- specify index 
+- config file instead of variables in the code 
 
 # What is the purpose and what's up with Kibana URL's ?
 In older version of kibana you could create a dashboard with filters that were filled by URL parameters which is very useful for generating links to reports that contain for example multiple datasets but you wish to be able to dynamically generate links to filter it down to a specific service, customer, location etc. 
@@ -58,6 +63,42 @@ Other then that, any "Field is value" filter can be added to the url as field=va
 UUID/Alias logic:
 ![alt text](https://raw.githubusercontent.com/gbit-is/kibana-URL-filter-creator/master/flowchart.PNG "Logo Title Text 1")
 
+# Special parameters
+
+## id
+id is the uuid (or alias) of the dashboard you want to create a link to
+
+## \_index 
+Kibana requires an index to be defined in the URL, if no _index is provided, it used the defined default index 
+
+## \_space
+If the dashboard you want to link to does not belong to the default space, a space id (or alias) must be provided 
+
+## \_time
+if no \_time value is provided it will default to the predefined one (last hour by default). However if you want to be able to link to a specific time you can do so by providing a timestamp and 1 or 2 time values (in minutes), if one is provided it is the time before and after the timestamp, if 2 are provided the first one sets the "from" time value and the second one the "to" time value.
+
+The syntax works as following:
+
+&\_time=timestamp(ISO8601)|preTime|<postTime>
+  
+Examples:
+
+&\_time=2020-11-05T14:39:11.406Z|30
+
+This will give you an hour long report with 30 minutes before and after the timestamp
+
+
+&\_time=2020-11-05T14:39:11.406Z|80|10
+
+This will give you a 90 minute report with 80 minutes before the timestamp and 10 minutes after it 
+
+## Full example
+
+Here is the link to our hamster board (because why give a non-silly example ?), it uses aliases for the uuid's of both the hamster-price board and the pet-data index, specifies it should route to the rodent team, give us a specific time frame and only show us data about cute hamsters and defines the nested field of body.limbs.legs ( [body][limbs][legs]) should be 4 
+
+your_flask_service?id=hamsterPrices&_index=petDatax&space=rodents&\_time=2020-11-05T14:39:11.406Z|80|10&cute=yes&body.limbs.legs=4
+
+
 
 # Installing 
 ## Linux:
@@ -66,7 +107,7 @@ or
 pip3 install flask    
 
 ## Windows:
-..... no idea
+..... Not familiar with running python on windows but I see no reason why it wouldn't work theré 
 
 
 ## As service on Ubuntu
@@ -77,17 +118,18 @@ $ systemctl start urlmaker.service
 
 
 # Configuration
-There are 3 parameters that have to be set on lines 23-25    
+There are a few parameters to set in config.ini
 
-* base: The base URL your kibana instance (for example: "https://your_kibana_url/app/kibana#/dashboard/") 
+flaskPort - Does what it says, the port flask will run on 
 
-* defaultBoardId: if no board id is provided, this is what it will default to (for example: "8f64416c-3f95-46b9-bf86-ae99dc03eabc" )  
+baseUrl - This one has to be formatted like this: https://%yoururl%/SPACEapp/kibana#/dashboard/. If a link is for the default space, it will simply trim the "SPACE" part out of it and route to the default space, if another space is defined, it will use "SPACE" part of it to construct a url routing to that space 
 
-* defaultIndexId: If no index id is provived, this is that it will default to (for example: "8f64416c-3f95-46b9-bf86-ae99dc03eabc" )    
-
-
+defaultBoardId - If no id is provided in the link, this is the board that you get routed to (UUID)
+defaultIndexId - If no index is provided, this is the index used (UUID)
+defaultTimeString - If no time value is provided, this is the one that will be used (URL fragment)
+debug - enables verbose logging (BOOL)
 
 # Kibana versions this works on:
-I do not know if this works on older Kibana versions, but I am guessing it works with at least all 6 and 7 releases. I wrote this for my usage on 7.4. Also confirmed on 7.5, 7.6, 7.6.2 aaaand I have been using this through constant updates until at least 7.9, I just don't update this readme.md often
+I do not know if this works on older Kibana versions, but I am guessing it works with at least all 6 and 7 releases. I wrote this for my usage on 7.4. Also confirmed on 7.5, 7.6, 7.6.2 aaaand I have been using this through constant updates until at least 7.9, I just don't update this readme.md everytime I update my cluster 
 
 If you end up trying this on a diffirent version, please leave me a comment so I can note down here which version work and which versions don't 
