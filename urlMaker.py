@@ -8,25 +8,36 @@ from flask import redirect
 from uuid import UUID
 # Used for alias mapping
 import configparser
+# Used for time math
+import datetime
+import dateutil.parser
+
 
 
 # Initialise the config file
 config = configparser.ConfigParser()
 config.sections()
-config.read('uuiDict.ini')
+config.read('config.ini')
 
+# Get parameters from config file
+port =              config["settings"]["flaskPort"]
+baseUrl =           config["settings"]["baseUrl"]
+defaultBoardId =    config["settings"]["defaultBoardId"]
+defaultIndexId =    config["settings"]["defaultIndexId"]
+defaultTimeString = config["settings"]["defaultTimeString"]
+DEBUG =             bool(config["settings"]["debug"])
 
-port = 8000 # Port for flask server
-
-
-
-base = "https://your_kibana_url/app/kibana#/dashboard/" # Base URL
-defaultBoardId = "3f95-46b9-bf86-ae99dc03eabc" # If no ID is provided, this gets used
-defaultIndexId = "3f95-46b9-bf86-ae99dc03eabc" # required for proper functioning, otherwise dashboards break when you try to edit the filters
-
-time = "?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-1h,to:now))" # Here the default time is set for dashboard view from this
+# Static values
+refresh = "?_g=(filters:!(),refreshInterval:(pause:!t,value:0)," # neccesary part of the URL
 qhead = "&_a=(description:'',filters:!(" # Neccesary string to build the URL
 
+
+
+
+# Print debug or not
+def debug(msg):
+    if DEBUG:
+        print("DEBUG: " + str(msg))
 
 
 # Just used for validating UUID's
@@ -39,19 +50,23 @@ def validate_uuid4(uuid_string):
 
 # Check the config file for alias names 
 def checkDict(name):
-    config.read('uuiDict.ini') # So we re-read the dict and can update it without restarting flask
+    config.read('config.ini') # So we re-read the dict and can update it without restarting flask
 
     try:
         value = config["dict"][name]
+        debug(name + " Is defined")
     except:
         value = "failed"
+        debug(name + " Is not defined")
     return value
 
 
 
 # Here we create a single filter parameter 
 def makeParam(field,match,index): # field is the field and match is, what we wanna match, this only supports "field is something" filters 
-    base = '''('$state':(store:appState),meta:(disabled:!f,index:'INDEX',key:FIELD,negate:!f,params:(query:MATCH),type:phrase,value:MATCH),query:(match:(FIELD:(query:MATCH,type:phrase))))''' # Base string 
+
+    # Base format of the query string
+    base = '''('$state':(store:appState),meta:(disabled:!f,index:'INDEX',key:FIELD,negate:!f,params:(query:MATCH),type:phrase,value:MATCH),query:(match:(FIELD:(query:MATCH,type:phrase))))''' 
     # populate the string with values
     base = base.replace("FIELD",field)
     match = "'" + match + "'"
@@ -60,42 +75,102 @@ def makeParam(field,match,index): # field is the field and match is, what we wan
     return base
 
 
+# Get the time part of the URL
+def makeTime(timeString):
+
+    # If no time is defined, return the default time value
+    if timeString == "default":
+        return defaultTimeString
+
+    # Is is easy to mess up the time values, if a parsing error occurs, default time is used
+    try: 
+        # Get the timestamp and first delta value
+        timeData = timeString.split("|")
+        tstamp = timeData[0] 
+        preTime = int(timeData[1])
+
+        # If a second delta value is defined, use it, if not, use the first one
+        print(timeData)
+        print(type(timeData))
+        if len(timeData) == 3:
+            postTime = int(timeData[2])
+        else:
+            postTime = preTime
+
+        # turn the string into datetime
+        tstamp = dateutil.parser.parse(tstamp)
+
+
+        # calculate a new timestamp
+        sTime = tstamp - datetime.timedelta(minutes=preTime)
+        eTime = tstamp + datetime.timedelta(minutes=postTime)
+
+        # make the timestamps compatible strings
+        sTime = sTime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        eTime = eTime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+        # Build the new URL parameters 
+        param =  "time:(from:'" + sTime + "',to:'" + eTime + "'))"
+
+        return param
+
+
+
+    except Exception as e:
+        debug(str(e))
+        return defaultTimeString
+
+
+
+
 # creations of the URL
-def makeUrl(id,params,index): 
+def makeUrl(id,params,index,space,time): 
     
     # Params must be a nested list,for example: [ ["foo","123"],["bar":"asdf"] ]
     # If only one param is used it must be like this for example: [ ["foo","123"] ]
 
 
-    # check if a UUID was provided for the dashboard
+    # check if a UUID was provided
     if validate_uuid4(id):
         uuid = id
     else:
         # if not, check the dict
         uuid = checkDict(id)
 
-    # Check if the index refernece is a UUID
+
     if validate_uuid4(index):
         pass
     else:
-        # If not, check the dict
         indexName = index
         index = checkDict(index)
 
-    
-    # If index is neither a UUID nor an alias, return an error
     if index == "failed":
         return "invalid?index=" + str(indexName) 
 
 
-    # If dashboard is neither a UUID nor an alias, return an error
+    time = makeTime(time)
+
+
+    # If neither a UUID nor an alias, return an error
     if uuid == "failed":
         return "invalid?id=" + str(id) 
 
     else:
 
+    
+        if space == "":
+            #baseUrl = baseUrl.replace("SPACE","")
+            urlBase = baseUrl.replace("SPACE","")
+
+        else:
+            spaceStr = "s/" + space + "/"
+            urlBase = baseUrl.replace("SPACE",spaceStr)
+
+
+
         # Build the first parts of the URL
-        url = base + uuid + time + qhead 
+        #url = urlBase + uuid + time + qhead 
+        url = urlBase + uuid + refresh + time + qhead 
 
         # Initialise some logic for the parameter parsins
         paramCount = len(params)
@@ -125,29 +200,42 @@ app = flask.Flask(__name__)
 @app.route("/")
 def hello():
     args = request.args # collect args from url
-    id = defaultBoardId # Initalise ID as default, will be overwritten if argument is present
+    id = 0 # Initalise ID for later comparison
     params = [ ] # Initalise list for later nesting of params
-    index = defaultIndexId # Initialise index as default, will be overwritten if argument is present
-    
+    index = defaultIndexId
+    space = ""
+    time = "default"
+
     for arg in args: # For each argument provided
 
-        # ID's are handled unlike other params
+        # First we check if it's a special parameter
         if arg == "id":
             id = args[arg]
-        # All normal params get put into a list and then appended to the collection list
         elif  arg == "_index":
             index = args[arg]
+        elif arg == "_space":
+            space = args[arg]
+        elif arg == "_time":
+            time = args[arg]
+
+
+        # If not, it must be a filter        
         else:
             param = [ arg, args[arg] ]
             params.append(param)
 
 
+    # If no ID was provided, set the default ID as the ID
+    if id == 0:
+        id = defaultBoardId
 
-    url = makeUrl(id,params,index) # Send all params to the URL creation function
+
+    url = makeUrl(id,params,index,space,time) # Send all params to the URL creation function
+    debug("Returned: " + url)
     return redirect(url,code=302) # redirect the user to the generated URL
 
-# If an invalid UUID or alias is provided by the user, they get send here instead of a broken Kibana link
 
+# If an invalid UUID or alias is provided by the user, they get send here instead of a broken Kibana link
 @app.route("/invalid")
 def invalid():
     args = request.args # Collect the args from the url
@@ -156,10 +244,12 @@ def invalid():
         value = str(args[arg])
     # Create a message for the user to recieve 
     message = "<br><br><h2>You provided an invalid " + type + " that is neither a UUID nor a defined alias<br>" + type + " that was provided was:<b> " + str(value) + "</b></h2>"
+    debug(message)
     return message
+
+
 
 
 # If run as a program directly, start flask
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port)
-
